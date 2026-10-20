@@ -1,0 +1,212 @@
+{
+  "version": 1,
+  "generated_by": "~/.claude/scripts/agent-map.mjs",
+  "profile": {
+    "value": "app",
+    "evidence": [
+      "docker-compose.yml",
+      "Dockerfile",
+      "dep:fastapi",
+      "+ runtime agents: 4"
+    ],
+    "llm_surface": true,
+    "synced_at": "2026-10-20"
+  },
+  "purpose": {
+    "claim": null,
+    "verified": null
+  },
+  "run": {
+    "dev": null,
+    "build": null,
+    "test": null,
+    "check": null,
+    "verify": null
+  },
+  "map": [],
+  "capabilities": [],
+  "actions": [],
+  "invariants": [],
+  "features": [],
+  "in_flight": {
+    "handoff": null,
+    "tasks_glob": "tasks/todo-*.md"
+  },
+  "agents": [
+    {
+      "id": "agent",
+      "def": "agent/",
+      "contract": null,
+      "kind": "dir",
+      "note": "agent-shaped directory",
+      "verified": "83ff6c0a2052cf828d190a687e70dbf74b820821",
+      "verified_hash": "3157bef5b561f4d44d5061a9b985a77f4c5b9955",
+      "derived": true
+    },
+    {
+      "id": "prompts",
+      "def": "skills/creative/baoyu-article-illustrator/prompts/",
+      "contract": null,
+      "kind": "dir",
+      "note": "agent-shaped directory",
+      "verified": "83ff6c0a2052cf828d190a687e70dbf74b820821",
+      "verified_hash": "8f32edf08be123c385fe6efecf9697e7fe9d4b41",
+      "derived": true
+    },
+    {
+      "id": "run_agent.py",
+      "def": "run_agent.py",
+      "contract": null,
+      "kind": "file",
+      "note": "agent-named source file",
+      "verified": "83ff6c0a2052cf828d190a687e70dbf74b820821",
+      "verified_hash": "ae1f85e58f7612782e7582300584d9d8af598277",
+      "derived": true
+    },
+    {
+      "id": "SOUL.md",
+      "def": "docker/SOUL.md",
+      "contract": null,
+      "kind": "file",
+      "note": "system prompt / persona file",
+      "verified": "83ff6c0a2052cf828d190a687e70dbf74b820821",
+      "verified_hash": "ba8dc44ea749ece55b1ab63a7ae0c12eeea91d79",
+      "derived": true
+    },
+    {
+      "id": "agent.json",
+      "def": "acp_registry/agent.json",
+      "contract": null,
+      "kind": "file",
+      "note": "system prompt / persona file",
+      "verified": "83ff6c0a2052cf828d190a687e70dbf74b820821",
+      "verified_hash": "159cb914472478a6a5dd2311a336c34d062f404e",
+      "derived": true
+    }
+  ],
+  "routing": [],
+  "guards": [
+    {
+      "id": "no-deferral-markers",
+      "claim": "No TODO/FIXME/HACK/XXX markers: fix it, or defer through a `ponytail:` comment (what was simplified, ceiling, upgrade trigger) that the debt ledger harvests",
+      "pattern": "\\b(?:TODO|FIXME|HACK|XXX)\\b",
+      "flags": "",
+      "globs": [
+        "**/*.{js,mjs,cjs,ts,tsx,jsx,py,go,rs,rb,php,java,kt,swift,cs,vue,svelte,astro,css,scss,html,sh,ps1,sql}"
+      ],
+      "ignore_line": "ponytail:",
+      "grandfathered": {
+        "agent/auxiliary_client.py": 1,
+        "agent/prompt_builder.py": 1,
+        "cli.py": 1,
+        "gateway/platforms/yuanbao.py": 1,
+        "optional-skills/research/darwinian-evolver/templates/custom_problem_template.py": 6,
+        "plugins/platforms/google_chat/adapter.py": 1,
+        "skills/productivity/linear/scripts/linear_api.py": 1,
+        "tests/acp/test_tools.py": 6,
+        "tests/tools/test_file_tools.py": 1,
+        "tools/file_operations.py": 1,
+        "tools/memory_tool.py": 1,
+        "ui-tui/packages/hermes-ink/src/ink/events/input-event.ts": 2,
+        "ui-tui/packages/hermes-ink/src/ink/render-to-screen.ts": 1,
+        "ui-tui/packages/hermes-ink/src/ink/screen.ts": 1,
+        "ui-tui/src/components/markdown.tsx": 1
+      },
+      "added": "2026-09-22"
+    },
+    {
+      "id": "file-size",
+      "claim": "No source file past 2,000 lines (one agent Read window); a file already past it may shrink, never grow. Split by concern in its own refactor commit, then make the change",
+      "type": "lines",
+      "max_lines": 2000,
+      "globs": [
+        "**/*.{js,mjs,cjs,ts,tsx,jsx,py,go,rs,rb,php,java,kt,swift,cs,vue,svelte,astro,css,scss,html,sh,ps1,sql}"
+      ],
+      "ignore": [
+        "**/*.min.*",
+        "**/vendor/**",
+        "**/generated/**",
+        "**/*.generated.*",
+        "**/*.d.ts"
+      ],
+      "ignore_line": "@section",
+      "grandfathered": {
+        "agent/agent_runtime_helpers.py": 2230,
+        "agent/anthropic_adapter.py": 2273,
+        "agent/auxiliary_client.py": 5403,
+        "agent/chat_completion_helpers.py": 2311,
+        "agent/conversation_loop.py": 4289,
+        "cli.py": 15081,
+        "cron/scheduler.py": 2025,
+        "gateway/platforms/api_server.py": 3614,
+        "gateway/platforms/base.py": 4241,
+        "gateway/platforms/feishu.py": 5120,
+        "gateway/platforms/matrix.py": 2906,
+        "gateway/platforms/qqbot/adapter.py": 3186,
+        "gateway/platforms/slack.py": 3027,
+        "gateway/platforms/telegram.py": 5713,
+        "gateway/platforms/weixin.py": 2171,
+        "gateway/platforms/yuanbao.py": 4874,
+        "gateway/run.py": 18461,
+        "hermes_cli/auth.py": 7660,
+        "hermes_cli/config.py": 5639,
+        "hermes_cli/doctor.py": 2103,
+        "hermes_cli/gateway.py": 5625,
+        "hermes_cli/kanban.py": 2762,
+        "hermes_cli/kanban_db.py": 6674,
+        "hermes_cli/main.py": 13981,
+        "hermes_cli/models.py": 3801,
+        "hermes_cli/setup.py": 3592,
+        "hermes_cli/tools_config.py": 3365,
+        "hermes_cli/web_server.py": 4730,
+        "hermes_state.py": 3279,
+        "optional-skills/migration/openclaw-migration/scripts/openclaw_to_hermes.py": 3136,
+        "plugins/kanban/dashboard/dist/index.js": 3651,
+        "plugins/kanban/dashboard/plugin_api.py": 2217,
+        "plugins/platforms/discord/adapter.py": 6192,
+        "plugins/platforms/google_chat/adapter.py": 3342,
+        "run_agent.py": 4410,
+        "scripts/install.ps1": 2370,
+        "scripts/install.sh": 2071,
+        "tests/agent/test_anthropic_adapter.py": 2008,
+        "tests/agent/test_auxiliary_client.py": 3028,
+        "tests/agent/test_credential_pool.py": 2424,
+        "tests/cron/test_scheduler.py": 2586,
+        "tests/gateway/test_api_server.py": 3346,
+        "tests/gateway/test_feishu.py": 4887,
+        "tests/gateway/test_google_chat.py": 2952,
+        "tests/gateway/test_matrix.py": 2672,
+        "tests/gateway/test_qqbot.py": 2201,
+        "tests/gateway/test_slack.py": 3179,
+        "tests/gateway/test_voice_command.py": 2883,
+        "tests/hermes_cli/test_auth_xai_oauth_provider.py": 2025,
+        "tests/hermes_cli/test_gateway_service.py": 2535,
+        "tests/hermes_cli/test_kanban_core_functionality.py": 4421,
+        "tests/hermes_cli/test_kanban_db.py": 3341,
+        "tests/hermes_cli/test_runtime_provider_resolution.py": 2703,
+        "tests/hermes_cli/test_web_server.py": 2377,
+        "tests/plugins/test_kanban_dashboard_plugin.py": 2197,
+        "tests/run_agent/test_run_agent.py": 5615,
+        "tests/test_hermes_state.py": 3023,
+        "tests/test_tui_gateway_server.py": 4928,
+        "tests/tools/test_delegate.py": 2671,
+        "tests/tools/test_mcp_tool.py": 3990,
+        "tests/tools/test_send_message_tool.py": 2689,
+        "tools/browser_tool.py": 3817,
+        "tools/delegate_tool.py": 2801,
+        "tools/mcp_tool.py": 3593,
+        "tools/skills_hub.py": 3456,
+        "tools/terminal_tool.py": 2405,
+        "tools/tts_tool.py": 2531,
+        "tui_gateway/server.py": 6782,
+        "ui-tui/packages/hermes-ink/src/ink/ink.tsx": 2699,
+        "ui-tui/packages/hermes-ink/src/native-ts/yoga-layout/index.ts": 2326
+      },
+      "added": "2026-10-20"
+    }
+  ],
+  "defaults_offered": [
+    "no-deferral-markers",
+    "file-size"
+  ]
+}
