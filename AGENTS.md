@@ -1135,15 +1135,12 @@ them into invariants before re-requesting review.
 <!-- door:begin -->
 ## How to work here
 
-1. **What this is:** Hermes Agent ☤: The self-improving AI agent built by Nous Research. (from README.md, unverified; confirm it and record one sentence in agent-map.json → purpose.claim)
-2. **Run it:** the Run line in the map below holds the dev, build, test and check commands (all unknown here: find them in package.json or the README and fill agent-map.json → run).
-3. **Before you commit:** this repo has no test setup the commit gate can see, so it checks only for secrets in the commit. If you add tests, record the command in agent-map.json → run.test.
-4. **Guards:** no-deferral-markers, file-size (table below). A new match in a file that is not already grandfathered denies the commit.
-5. **If you change a path or command this map names,** edit agent-map.json in the same change and run `node ~/.claude/scripts/agent-map.mjs verify <id>`; a wrong map denies the commit. Unknown is fine, wrong is not.
-6. **Worktrees:** at most 10 per repo; a new one is denied past that. Merge or remove yours when the work lands.
-7. **Past context:** no project memory yet; open plans in `tasks/todo-*.md`; anything you cannot name exactly: `~/.claude/scripts/qmd search "<words>"`.
-8. **The harness:** every rule, gate, script and skill on this machine is searchable: `node ~/.claude/scripts/harness.mjs <plain words>` (`--capabilities` lists what this PC can reach). A gate that blocks you names itself; `--gates <name>` explains it.
-9. **Who decides:** Gene defines what; the agent works out how and shows the receipt (a test run, a live check, a path), never a belief. Claude leads anything in the code; Codex works on request; Mako (Grok Bot) only through the Linear "Agent bridge".
+1. **What this is:** Hermes Agent ☤: The self-improving AI agent built by Nous Research. (from README.md)
+2. **Before you commit:** the commit gate knows no test command here, so it checks only for secrets.
+3. **Guards:** no-deferral-markers, file-size (table below). A new match in a file that is not already grandfathered denies the commit.
+4. **The map below:** if your change moves a path or command it names, update agent-map.json in the same commit; a wrong map denies the commit, an unknown slot never does.
+5. **Past context:** open plans in `tasks/todo-*.md`; anything you cannot name exactly: `~/.claude/scripts/qmd search "<words>"`.
+6. **Any rule, gate or script on this machine:** `node ~/.claude/scripts/harness.mjs <plain words>`; a gate that blocks you names itself, and `--gates <name>` explains it.
 
 <!-- door:end -->
 
