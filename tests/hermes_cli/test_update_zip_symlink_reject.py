@@ -10,7 +10,9 @@ we explicitly reject any member whose type bits are S_IFLNK.
 import io
 import os
 import stat
+import sys
 import tempfile
+import types
 import zipfile
 from unittest.mock import patch
 
@@ -93,21 +95,36 @@ def test_update_via_zip_accepts_normal_member(tmp_path, monkeypatch, capsys):
     zip_path = tmp_path / "normal.zip"
     _build_normal_zip(str(zip_path))
 
-    from hermes_cli.main import _update_via_zip
+    import hermes_cli.main as main
 
     args = type("Args", (), {})()
+    install_root = tmp_path / "install"
+    install_root.mkdir()
 
     def fake_urlretrieve(url, dest):
         with open(zip_path, "rb") as src, open(dest, "wb") as dst:
             dst.write(src.read())
         return dest, None
 
-    with patch("urllib.request.urlretrieve", side_effect=fake_urlretrieve):
-        # The function will fail later (no real install dir to update into),
-        # but it must get past the ZIP validation without raising
-        # ValueError("symlink member").
+    sync_skills = types.SimpleNamespace(
+        sync_skills=lambda quiet=True: {"copied": [], "updated": []}
+    )
+
+    with patch("urllib.request.urlretrieve", side_effect=fake_urlretrieve), \
+         patch.dict(sys.modules, {"tools.skills_sync": sync_skills}), \
+         patch.object(main, "PROJECT_ROOT", install_root), \
+         patch.object(main, "_clear_bytecode_cache", return_value=0), \
+         patch.object(main, "_ensure_uv_for_termux", return_value=None), \
+         patch.object(main, "_install_python_dependencies_with_optional_fallback"), \
+         patch.object(main, "_update_node_dependencies"), \
+         patch.object(main, "_build_web_ui", return_value=True), \
+         patch.object(main, "_kill_stale_dashboard_processes"):
+        # Isolate the ZIP validation path: after extraction succeeds, the
+        # update routine normally runs dependency installs and a web build.
+        # Those are covered elsewhere and can exceed pytest's timeout on
+        # cold CI shards.
         try:
-            _update_via_zip(args)
+            main._update_via_zip(args)
         except SystemExit:
             pass
 
