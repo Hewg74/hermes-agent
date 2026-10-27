@@ -79,6 +79,7 @@ $RepoUrlSsh = "git@github.com:NousResearch/hermes-agent.git"
 $RepoUrlHttps = "https://github.com/NousResearch/hermes-agent.git"
 $PythonVersion = "3.11"
 $NodeVersion = "22"
+$NodeSafeRange = "^22.23.4 || >=24.22.1"
 
 # Stage-protocol version.  Bumped only for genuinely breaking changes to the
 # manifest schema, stage-name set semantics, or stdout JSON shape.  Adding a
@@ -688,27 +689,71 @@ function Set-GitBashEnvVar {
     Write-Info "If needed, set HERMES_GIT_BASH_PATH manually to your bash.exe path."
 }
 
+function Test-NodeVersionSafe {
+    param([string]$Version)
+    $raw = $Version.Trim().TrimStart("v")
+    $parts = $raw -split "\."
+    if ($parts.Count -lt 3) { return $false }
+    try {
+        $major = [int]$parts[0]
+        $minor = [int]$parts[1]
+        $patch = [int]$parts[2]
+    } catch {
+        return $false
+    }
+
+    if ($major -eq 22) {
+        return ($minor -gt 23) -or (($minor -eq 23) -and ($patch -ge 4))
+    }
+    if ($major -eq 24) {
+        return ($minor -gt 22) -or (($minor -eq 22) -and ($patch -ge 1))
+    }
+    return $major -gt 24
+}
+
+function Test-NodeCommandSafe {
+    param([string]$NodeCommand)
+    try {
+        $version = & $NodeCommand --version
+        if (Test-NodeVersionSafe $version) {
+            return $version
+        }
+        return $null
+    } catch {
+        return $null
+    }
+}
+
 function Test-Node {
     Write-Info "Checking Node.js (for browser tools)..."
 
-    if (Get-Command node -ErrorAction SilentlyContinue) {
-        $version = node --version
-        Write-Success "Node.js $version found"
-        $script:HasNode = $true
-        return $true
+    $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+    if ($nodeCmd) {
+        $version = Test-NodeCommandSafe $nodeCmd.Source
+        if ($version) {
+            Write-Success "Node.js $version found"
+            $script:HasNode = $true
+            return $true
+        }
+        $foundVersion = & $nodeCmd.Source --version
+        Write-Warn "Node.js $foundVersion is outside the safe range ($NodeSafeRange); installing a safe Node.js $NodeVersion release..."
     }
 
     # Check our own managed install from a previous run
     $managedNode = "$HermesHome\node\node.exe"
     if (Test-Path $managedNode) {
-        $version = & $managedNode --version
-        $env:Path = "$HermesHome\node;$env:Path"
-        Write-Success "Node.js $version found (Hermes-managed)"
-        $script:HasNode = $true
-        return $true
+        $version = Test-NodeCommandSafe $managedNode
+        if ($version) {
+            $env:Path = "$HermesHome\node;$env:Path"
+            Write-Success "Node.js $version found (Hermes-managed)"
+            $script:HasNode = $true
+            return $true
+        }
+        $foundVersion = & $managedNode --version
+        Write-Warn "Hermes-managed Node.js $foundVersion is outside the safe range ($NodeSafeRange); replacing it..."
     }
 
-    Write-Info "Node.js not found -- installing Node.js $NodeVersion LTS..."
+    Write-Info "Safe Node.js not found -- installing Node.js $NodeVersion LTS..."
 
     # Try the portable-zip path FIRST -- no UAC, no admin, no winget MSI.
     # winget install OpenJS.NodeJS.LTS triggers a system-wide MSI install
@@ -755,6 +800,11 @@ function Test-Node {
                 }
 
                 $version = & "$HermesHome\node\node.exe" --version
+                if (-not (Test-NodeVersionSafe $version)) {
+                    Write-Warn "Node.js $version installed, but Hermes requires $NodeSafeRange"
+                    $script:HasNode = $false
+                    return $true
+                }
                 Write-Success "Node.js $version installed to $HermesHome\node\ (portable, user-scoped)"
                 $script:HasNode = $true
 
@@ -789,6 +839,11 @@ function Test-Node {
             $env:Path = [Environment]::GetEnvironmentVariable("Path", "User") + ";" + [Environment]::GetEnvironmentVariable("Path", "Machine")
             if (Get-Command node -ErrorAction SilentlyContinue) {
                 $version = node --version
+                if (-not (Test-NodeVersionSafe $version)) {
+                    Write-Warn "Node.js $version installed via winget, but Hermes requires $NodeSafeRange"
+                    $script:HasNode = $false
+                    return $true
+                }
                 Write-Success "Node.js $version installed via winget"
                 $script:HasNode = $true
                 return $true

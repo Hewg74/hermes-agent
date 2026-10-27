@@ -18,13 +18,13 @@
 #   if [ "$HERMES_NODE_AVAILABLE" = true ]; then ...; fi
 #
 # Env inputs (set before sourcing to override defaults):
-#   HERMES_NODE_MIN_VERSION   (default: 20)   — accepted on PATH
 #   HERMES_NODE_TARGET_MAJOR  (default: 22)   — installed when we install
+#   HERMES_NODE_SAFE_RANGE    (default: ^22.23.4 || >=24.22.1) — accepted on PATH
 #   HERMES_HOME               (default: $HOME/.hermes)
 # ============================================================================
 
-HERMES_NODE_MIN_VERSION="${HERMES_NODE_MIN_VERSION:-20}"
 HERMES_NODE_TARGET_MAJOR="${HERMES_NODE_TARGET_MAJOR:-22}"
+HERMES_NODE_SAFE_RANGE="${HERMES_NODE_SAFE_RANGE:-^22.23.4 || >=24.22.1}"
 HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
 HERMES_NODE_AVAILABLE=false
 
@@ -44,15 +44,25 @@ _nb_is_termux() {
     [ -n "${TERMUX_VERSION:-}" ] || [[ "${PREFIX:-}" == *"com.termux/files/usr"* ]]
 }
 
-_nb_node_major() {
-    local v
-    v=$(node --version 2>/dev/null | sed 's/^v//' | cut -d. -f1)
-    [[ "$v" =~ ^[0-9]+$ ]] && echo "$v" || echo 0
+_nb_node_version_is_safe() {
+    local raw="${1#v}"
+    local major minor patch
+    IFS=. read -r major minor patch _ <<< "$raw"
+    [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ && "$patch" =~ ^[0-9]+$ ]] || return 1
+    if [ "$major" -eq 22 ]; then
+        [ "$minor" -gt 23 ] || { [ "$minor" -eq 23 ] && [ "$patch" -ge 4 ]; }
+    elif [ "$major" -eq 24 ]; then
+        [ "$minor" -gt 22 ] || { [ "$minor" -eq 22 ] && [ "$patch" -ge 1 ]; }
+    else
+        [ "$major" -gt 24 ]
+    fi
 }
 
 _nb_have_modern_node() {
+    local version
     command -v node >/dev/null 2>&1 || return 1
-    [ "$(_nb_node_major)" -ge "$HERMES_NODE_MIN_VERSION" ]
+    version=$(node --version 2>/dev/null) || return 1
+    _nb_node_version_is_safe "$version"
 }
 
 # ---------------------------------------------------------------------------
@@ -210,6 +220,9 @@ ensure_node() {
         HERMES_NODE_AVAILABLE=true
         return 0
     fi
+    if command -v node >/dev/null 2>&1; then
+        _nb_warn "Node $(node --version) is outside the safe range ($HERMES_NODE_SAFE_RANGE); installing Node $HERMES_NODE_TARGET_MAJOR..."
+    fi
 
     if [ -x "$HERMES_HOME/node/bin/node" ]; then
         export PATH="$HERMES_HOME/node/bin:$PATH"
@@ -218,6 +231,7 @@ ensure_node() {
             HERMES_NODE_AVAILABLE=true
             return 0
         fi
+        _nb_warn "Hermes-managed Node $(node --version) is outside the safe range ($HERMES_NODE_SAFE_RANGE); replacing it..."
     fi
 
     # Version managers first — respect the user's existing setup.
@@ -233,6 +247,7 @@ ensure_node() {
     _nb_install_bundled_node && { HERMES_NODE_AVAILABLE=true; return 0; }
 
     _nb_warn "Node.js install failed — TUI and browser tools will be unavailable."
+    _nb_warn "Hermes requires Node $HERMES_NODE_SAFE_RANGE."
     _nb_warn "Install manually: https://nodejs.org/en/download/  (or: \`brew install node\`, \`fnm install $HERMES_NODE_TARGET_MAJOR\`, etc.)"
     return 1
 }

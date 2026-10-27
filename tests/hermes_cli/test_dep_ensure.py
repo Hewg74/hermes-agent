@@ -2,13 +2,52 @@ from pathlib import Path
 from unittest.mock import patch
 
 
+def test_node_version_safe_range_rejects_cve_versions():
+    from hermes_cli.dep_ensure import _node_version_is_safe
+
+    assert _node_version_is_safe("v20.19.6") is False
+    assert _node_version_is_safe("v22.23.3") is False
+    assert _node_version_is_safe("v22.23.4") is True
+    assert _node_version_is_safe("v24.22.0") is False
+    assert _node_version_is_safe("v24.22.1") is True
+
+
 def test_ensure_dependency_skips_when_present():
     """ensure_dependency is a no-op when the dep is already available."""
     from hermes_cli.dep_ensure import ensure_dependency
     with patch("hermes_cli.dep_ensure.shutil") as mock_shutil:
         mock_shutil.which.return_value = "/usr/bin/node"
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = type("R", (), {"returncode": 0, "stdout": "v22.23.4\n"})()
+            result = ensure_dependency("node", interactive=False)
+            assert result is True
+
+
+def test_ensure_dependency_installs_when_node_version_is_vulnerable(tmp_path):
+    """A vulnerable node on PATH must not satisfy the node dependency."""
+    from hermes_cli.dep_ensure import ensure_dependency
+
+    install_script = tmp_path / "install.sh"
+    install_script.write_text("#!/bin/sh\n", encoding="utf-8")
+    managed_node = tmp_path / "hermes" / "node" / "bin" / "node"
+
+    def fake_run(cmd, **kwargs):
+        if cmd == ["/usr/bin/node", "--version"]:
+            return type("R", (), {"returncode": 0, "stdout": "v22.23.3\n"})()
+        if cmd == [str(managed_node), "--version"]:
+            return type("R", (), {"returncode": 0, "stdout": "v22.23.4\n"})()
+        managed_node.parent.mkdir(parents=True)
+        managed_node.write_text("#!/bin/sh\n", encoding="utf-8")
+        return type("R", (), {"returncode": 0, "stdout": ""})()
+
+    with patch("hermes_cli.dep_ensure.shutil") as mock_shutil, \
+         patch("hermes_cli.dep_ensure._find_install_script", return_value=(install_script, "bash")), \
+         patch("hermes_constants.get_hermes_home", return_value=tmp_path / "hermes"), \
+         patch("subprocess.run", side_effect=fake_run) as mock_run:
+        mock_shutil.which.side_effect = lambda name: "/usr/bin/node" if name == "node" else None
         result = ensure_dependency("node", interactive=False)
         assert result is True
+        assert ["bash", str(install_script), "--ensure", "node"] in [call.args[0] for call in mock_run.call_args_list]
 
 
 def test_ensure_dependency_returns_false_when_missing_noninteractive():
