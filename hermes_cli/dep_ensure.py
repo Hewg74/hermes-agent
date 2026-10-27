@@ -23,9 +23,65 @@ import sys
 from pathlib import Path
 
 _IS_WINDOWS = platform.system() == "Windows"
+NODE_SAFE_RANGE = "^22.23.4 || >=24.22.1"
+
+
+def _node_version_is_safe(version: str) -> bool:
+    raw = version.strip().lstrip("v")
+    parts = raw.split(".")
+    if len(parts) < 3:
+        return False
+    try:
+        major, minor, patch = (int(parts[0]), int(parts[1]), int(parts[2]))
+    except ValueError:
+        return False
+    if major == 22:
+        return (minor, patch) >= (23, 4)
+    if major == 24:
+        return (minor, patch) >= (22, 1)
+    return major > 24
+
+
+def _node_available() -> bool:
+    candidates: list[Path] = []
+    node = shutil.which("node")
+    if node:
+        candidates.append(Path(node))
+    try:
+        from hermes_constants import get_hermes_home
+
+        managed = get_hermes_home() / "node" / ("node.exe" if _IS_WINDOWS else "bin/node")
+        if managed not in candidates:
+            candidates.append(managed)
+    except Exception:
+        pass
+
+    for candidate in candidates:
+        if _node_command_is_safe(candidate):
+            node_dir = str(candidate.parent)
+            path_parts = os.environ.get("PATH", "").split(os.pathsep)
+            if node_dir not in path_parts:
+                os.environ["PATH"] = node_dir + os.pathsep + os.environ.get("PATH", "")
+            return True
+    return False
+
+
+def _node_command_is_safe(node: Path) -> bool:
+    if not node.is_file() and not shutil.which(str(node)):
+        return False
+    try:
+        result = subprocess.run(
+            [str(node), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0 and _node_version_is_safe(result.stdout)
 
 _DEP_CHECKS = {
-    "node": lambda: shutil.which("node") is not None,
+    "node": _node_available,
     "browser": lambda: (
         shutil.which("agent-browser") is not None
         or _has_system_browser()
@@ -36,7 +92,7 @@ _DEP_CHECKS = {
 }
 
 _DEP_DESCRIPTIONS = {
-    "node": "Node.js (required for browser tools and TUI)",
+    "node": f"Node.js {NODE_SAFE_RANGE} (required for browser tools and TUI)",
     "browser": "Browser engine (Chromium, for web browsing tools)",
     "ripgrep": "ripgrep (fast file search)",
     "ffmpeg": "ffmpeg (TTS voice messages)",

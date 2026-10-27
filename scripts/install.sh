@@ -58,6 +58,7 @@ else
 fi
 PYTHON_VERSION="3.11"
 NODE_VERSION="22"
+NODE_SAFE_RANGE="^22.23.4 || >=24.22.1"
 
 # FHS-style root install layout (set by resolve_install_layout when applicable):
 #   code at /usr/local/lib/hermes-agent, command at /usr/local/bin/hermes,
@@ -538,26 +539,46 @@ check_node() {
 
     if command -v node &> /dev/null; then
         local found_ver=$(node --version)
-        log_success "Node.js $found_ver found"
-        HAS_NODE=true
-        return 0
+        if node_version_is_safe "$found_ver"; then
+            log_success "Node.js $found_ver found"
+            HAS_NODE=true
+            return 0
+        fi
+        log_warn "Node.js $found_ver is outside the safe range ($NODE_SAFE_RANGE); installing a safe Node.js $NODE_VERSION release..."
     fi
 
     # Check our own managed install from a previous run
     if [ -x "$HERMES_HOME/node/bin/node" ]; then
         export PATH="$HERMES_HOME/node/bin:$PATH"
         local found_ver=$("$HERMES_HOME/node/bin/node" --version)
-        log_success "Node.js $found_ver found (Hermes-managed)"
-        HAS_NODE=true
-        return 0
+        if node_version_is_safe "$found_ver"; then
+            log_success "Node.js $found_ver found (Hermes-managed)"
+            HAS_NODE=true
+            return 0
+        fi
+        log_warn "Hermes-managed Node.js $found_ver is outside the safe range ($NODE_SAFE_RANGE); replacing it..."
     fi
 
     if [ "$DISTRO" = "termux" ]; then
-        log_info "Node.js not found — installing Node.js via pkg..."
+        log_info "Safe Node.js not found — installing Node.js via pkg..."
     else
-        log_info "Node.js not found — installing Node.js $NODE_VERSION LTS..."
+        log_info "Safe Node.js not found — installing Node.js $NODE_VERSION LTS..."
     fi
     install_node
+}
+
+node_version_is_safe() {
+    local raw="${1#v}"
+    local major minor patch
+    IFS=. read -r major minor patch _ <<< "$raw"
+    [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ && "$patch" =~ ^[0-9]+$ ]] || return 1
+    if [ "$major" -eq 22 ]; then
+        [ "$minor" -gt 23 ] || { [ "$minor" -eq 23 ] && [ "$patch" -ge 4 ]; }
+    elif [ "$major" -eq 24 ]; then
+        [ "$minor" -gt 22 ] || { [ "$minor" -eq 22 ] && [ "$patch" -ge 1 ]; }
+    else
+        [ "$major" -gt 24 ]
+    fi
 }
 
 install_node() {
@@ -566,8 +587,13 @@ install_node() {
         if pkg install -y nodejs >/dev/null; then
             local installed_ver
             installed_ver=$(node --version 2>/dev/null)
-            log_success "Node.js $installed_ver installed via pkg"
-            HAS_NODE=true
+            if node_version_is_safe "$installed_ver"; then
+                log_success "Node.js $installed_ver installed via pkg"
+                HAS_NODE=true
+            else
+                log_warn "Node.js $installed_ver installed via pkg, but Hermes requires $NODE_SAFE_RANGE"
+                HAS_NODE=false
+            fi
         else
             log_warn "Failed to install Node.js via pkg"
             HAS_NODE=false
@@ -665,6 +691,11 @@ install_node() {
 
     local installed_ver
     installed_ver=$("$HERMES_HOME/node/bin/node" --version 2>/dev/null)
+    if ! node_version_is_safe "$installed_ver"; then
+        log_warn "Installed Node.js $installed_ver, but Hermes requires $NODE_SAFE_RANGE"
+        HAS_NODE=false
+        return 0
+    fi
     log_success "Node.js $installed_ver installed to ~/.hermes/node/"
     HAS_NODE=true
 }
